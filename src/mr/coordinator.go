@@ -77,7 +77,7 @@ func (c *Coordinator) server() {
 // if the entire job has finished.
 //
 func (c *Coordinator) Done() bool {
-	ret := false
+	ret := true
 	// Your code here.
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
@@ -132,7 +132,7 @@ func (c *Coordinator) initReduceTask() {
 func (c *Coordinator) tickSchedule() {
 	for !c.Done() {
 		//任务调度
-		go c.schedule()
+		c.schedule()
 		time.Sleep(ScheduleInterval)
 	}
 }
