@@ -234,25 +234,13 @@ func Make(peers []*labrpc.ClientEnd, me int,
 		persister: persister,
 		me: me,
 		applyCh: applyCh,
-		state: Follower,
-		currentTerm: 0,
-		votedFor: -1,
-		logs: make([]Entry,0),
-		commitIndex: 0,
-		nextIndex: make([]int,len(peers)),
-		matchIndex: make([]int,len(peers)),
+		
 	}
 	rf.logs = append(rf.logs, Entry{
 		Index: 0,
 		Term:  0,
 	})
-	//rf.readPersist(persister.ReadRaftState(),persister.ReadSnapshot())
-	rf.refreshElectionTimeout()
-
-
-	// start ticker goroutine to start elections
-	go rf.electionTicker()
-	go rf.leaderTicker()
+	
 
 	return rf
 }
