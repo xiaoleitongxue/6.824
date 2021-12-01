@@ -18,7 +18,12 @@ package raft
 //
 
 import (
+	"sync"
 	"sync/atomic"
+
+
+	//"time"
+
 	//	"6.824/labgob"
 	"6.824/labrpc"
 )
@@ -177,6 +182,7 @@ func (rf *Raft) sendAppendEntries(server int, args *AppendEntriesArgs, reply *Ap
 // the leader.
 //
 func (rf *Raft) Start(command interface{}) (int, int, bool) {
+	/*
 	index := -1
 	term := -1
 	isLeader := true
@@ -184,6 +190,23 @@ func (rf *Raft) Start(command interface{}) (int, int, bool) {
 	// Your code here (2B).
 
 	return index, term, isLeader
+
+	 */
+	rf.mu.Lock()
+	defer rf.mu.Unlock()
+	if rf.state != Leader {
+		return -1, -1, false
+	}
+	entry := Entry{
+		Index : rf.getLastLogIndex() + 1,
+		Term : rf.currentTerm,
+		Command: command,
+	}
+	rf.logs = append(rf.logs,entry)
+
+	//broadcast logs
+	rf.BroadcastHeartbeat(false)
+	return entry.Index, entry.Term, true
 }
 
 //
@@ -228,21 +251,43 @@ func (rf *Raft) ChangeState(state NodeState) {
 //
 func Make(peers []*labrpc.ClientEnd, me int,
 	persister *Persister, applyCh chan ApplyMsg) *Raft {
+		rf := &Raft{
+			peers:          peers,
+			persister:      persister,
+			me:             me,
+			dead:           0,
+			applyCh:        applyCh,
+			replicatorCond: make([]*sync.Cond, len(peers)),
+			state:          Follower,
+			currentTerm:    0,
+			votedFor:       -1,
+			logs:           make([]Entry, 1),
+			nextIndex:      make([]int, len(peers)),
+			matchIndex:     make([]int, len(peers)),
 
-	rf := &Raft{
-		peers: peers,
-		persister: persister,
-		me: me,
-		applyCh: applyCh,
-		
-	}
-	rf.logs = append(rf.logs, Entry{
-		Index: 0,
-		Term:  0,
-	})
+			//heartbeatTimer: time.NewTimer(StableHeartbeatTimeout()),
+			//electionTimer:  time.NewTimer(RandomizedElectionTimeout()),
+		}
+		// initialize from state persisted before a crash
+		rf.readPersist(persister.ReadRaftState())
+		//when there have logs need to apply, signal it
+		rf.applyCond = sync.NewCond(&rf.mu)
+		lastLog := rf.getLastLog()
+		for i := 0; i < len(peers); i++ {
+			rf.matchIndex[i], rf.nextIndex[i] = 0, lastLog.Index+1
+			if i != rf.me {
+				rf.replicatorCond[i] = sync.NewCond(&sync.Mutex{})
+				// start replicator goroutine to replicate entries in batch
+				go rf.replicator(i)
+			}
+		}
+		// start ticker goroutine to start elections
+		go rf.HeartbeatTicker()
+		go rf.electionTicker()
+		// start applier goroutine to push committed logs into applyCh exactly once(正好一次)
+		go rf.applier()
 	
-
-	return rf
+		return rf
 }
 
 
