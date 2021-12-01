@@ -1,12 +1,14 @@
 package raft
 
 func (rf *Raft) BroadcastHeartbeat(isHeartBeat bool) {
+
 	for peer := range rf.peers {
 		if peer == rf.me {
 			continue
 		}
 		if isHeartBeat {
 			// need sending at once to maintain leadership
+			//fmt.Printf("%v is leader, it begins to send logs, leader's commitIndx is %v\n",rf.me,rf.commitIndex)
 			go rf.replicateOneRound(peer)
 		} else {
 			// just signal replicator goroutine to send entries in batch
@@ -34,7 +36,7 @@ func (rf *Raft) needReplicating(peer int) bool {
 	defer rf.mu.Unlock()
 	//when leader's last log index > matchIndex of one peer
 	//leader needs to copy logs
-	return rf.state == Leader && rf.matchIndex[peer] < rf.getLastLog().Index
+	return rf.state == Leader && rf.nextIndex[peer] <= rf.getLastLog().Index
 }
 
 func (rf *Raft) applier() {
@@ -52,7 +54,6 @@ func (rf *Raft) replicateOneRound(peer int) {
 	request := rf.genAppendEntriesRequest(prevLogIndex)
 	rf.mu.RUnlock()
 	response := new(AppendEntriesReply)
-
 	if rf.sendAppendEntries(peer, &request, response) {
 		rf.mu.Lock()
 		rf.handleAppendEntriesResponse(peer, &request, response)
@@ -81,7 +82,7 @@ func (rf *Raft) handleAppendEntriesResponse(peer int, request *AppendEntriesArgs
 			rf.currentTerm = response.Term
 			rf.ChangeState(Follower)
 		} else if response.ConflictIndex > 0{
-			rf.nextIndex[peer] = response.ConflictIndex
+			rf.nextIndex[peer] = response.ConflictIndex - 1
 		}
 		return
 	}
@@ -104,7 +105,7 @@ func (rf *Raft) handleAppendEntriesResponse(peer int, request *AppendEntriesArgs
 	if oldCommitIndex >= newCommitIndex || rf.logs[newCommitIndex].Term != rf.currentTerm{
 		return
 	}
-
+	//new
 	count  := 1
 	for i := range rf.peers{
 		if i == rf.me{

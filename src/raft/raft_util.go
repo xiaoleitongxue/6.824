@@ -20,12 +20,14 @@ type Entry struct {
 }
 
 func StableHeartbeatTimeout() time.Duration {
-	return time.Duration(100) * time.Millisecond
+	return time.Duration(50) * time.Millisecond
 }
 
 
 func RandomizedElectionTimeout() time.Duration {
-	return time.Duration(rand.Intn(300)+150) * time.Millisecond
+	rand.Seed(time.Now().UnixNano())
+	d := time.Duration(rand.Intn(300)+150) * time.Millisecond
+	return d
 }
 
 func max(a int, b int) int {
@@ -81,12 +83,12 @@ func (rf *Raft) isLogUpToDate(term int, index int) bool {
 	}
 	return ans
 }
-
+//rf is receiver
 func (rf *Raft) matchLog(prevLogTerm int, prevLogIndex int) bool{
-	if rf.logs[prevLogIndex].Term == prevLogTerm{
-		return true
-	}else{
+	if prevLogIndex > rf.getLastLogIndex() || rf.logs[prevLogIndex].Term != prevLogTerm{
 		return false
+	}else{
+		return true
 	}
 }
 

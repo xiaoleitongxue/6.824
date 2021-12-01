@@ -18,6 +18,7 @@ package raft
 //
 
 import (
+
 	"sync"
 	"sync/atomic"
 	"time"
@@ -272,6 +273,7 @@ func Make(peers []*labrpc.ClientEnd, me int,
 			go rf.replicator(i)
 		}
 	}
+
 	// start ticker goroutine to start elections
 	//go rf.HeartbeatTicker()
 	go rf.Ticker()

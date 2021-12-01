@@ -5,8 +5,7 @@ func (rf *Raft) RequestVote(request *RequestVoteArgs, response *RequestVoteReply
 	rf.mu.Lock()
 	defer rf.mu.Unlock()
 
-
-	if request.Term < rf.currentTerm || (request.Term == rf.currentTerm && rf.votedFor != -1 && rf.votedFor != request.CandidateId) {
+	if request.Term < rf.currentTerm {
 		response.Term, response.VoteGranted = rf.currentTerm, false
 		return
 	}
@@ -16,13 +15,11 @@ func (rf *Raft) RequestVote(request *RequestVoteArgs, response *RequestVoteReply
 	}
 	// if receiver's log more update to date
 	if rf.isLogUpToDate(request.LastLogTerm, request.LastLogIndex) {
-		response.Term, response.VoteGranted = rf.currentTerm, false
-		return
+		response.VoteGranted = false
+	}else if rf.votedFor == request.CandidateId || rf.votedFor == -1{
+		rf.votedFor = request.CandidateId
 	}
 
-	rf.votedFor = request.CandidateId
-	rf.electionTimer.Reset(RandomizedElectionTimeout())
-	//rf.refreshElectionTimeout()
-	response.Term, response.VoteGranted = rf.currentTerm, true
+
 	return
 }

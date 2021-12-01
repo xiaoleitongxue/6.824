@@ -8,10 +8,12 @@ func (rf *Raft) Ticker() {
 		select {
 		case <-rf.electionTimer.C:
 			rf.mu.Lock()
-			rf.ChangeState(Candidate)
-			rf.currentTerm += 1
-			rf.StartElection()
-			rf.electionTimer.Reset(RandomizedElectionTimeout())
+			if rf.state != Leader{
+				rf.ChangeState(Candidate)
+				rf.currentTerm += 1
+				rf.electionTimer.Reset(RandomizedElectionTimeout())
+				rf.StartElection()
+			}
 			rf.mu.Unlock()
 		case <-rf.heartbeatTimer.C:
 			rf.mu.Lock()
