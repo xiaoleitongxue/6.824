@@ -3,7 +3,7 @@ package raft
 import (
 	"6.824/labrpc"
 	"sync"
-
+	"time"
 
 	//"time"
 )
@@ -30,12 +30,12 @@ type Raft struct {
 	votedFor    int
 	logs        []Entry
 	commitIndex int
-	lastApplied int
+	//lastApplied int
 	nextIndex   []int
 	matchIndex  []int
-	lastHeartbeat int64
-	//electionTimer  *time.Timer
-	//heartbeatTimer *time.Timer
+	//lastHeartbeat int64
+	electionTimer  *time.Timer
+	heartbeatTimer *time.Timer
 }
 
 

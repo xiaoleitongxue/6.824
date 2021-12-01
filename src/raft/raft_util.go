@@ -20,12 +20,12 @@ type Entry struct {
 }
 
 func StableHeartbeatTimeout() time.Duration {
-	return time.Duration(50) * time.Millisecond
+	return time.Duration(100) * time.Millisecond
 }
 
 
 func RandomizedElectionTimeout() time.Duration {
-	return time.Duration(rand.Intn(300)+200) * time.Millisecond
+	return time.Duration(rand.Intn(300)+150) * time.Millisecond
 }
 
 func max(a int, b int) int {

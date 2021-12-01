@@ -20,7 +20,7 @@ package raft
 import (
 	"sync"
 	"sync/atomic"
-
+	"time"
 
 	//"time"
 
@@ -50,8 +50,6 @@ type ApplyMsg struct {
 	SnapshotTerm  int
 	SnapshotIndex int
 }
-
-
 
 // return currentTerm and whether this server
 // believes it is the leader.
@@ -125,10 +123,6 @@ func (rf *Raft) Snapshot(index int, snapshot []byte) {
 
 }
 
-
-
-
-
 //
 // example code to send a RequestVote RPC to a server.
 // server is the index of the target server in rf.peers[].
@@ -167,6 +161,7 @@ func (rf *Raft) sendAppendEntries(server int, args *AppendEntriesArgs, reply *Ap
 	ok := rf.peers[server].Call("Raft.AppendEntries", args, reply)
 	return ok
 }
+
 //
 // the service using Raft (e.g. a k/v server) wants to start
 // agreement on the next command to be appended to Raft's log. if this
@@ -183,26 +178,26 @@ func (rf *Raft) sendAppendEntries(server int, args *AppendEntriesArgs, reply *Ap
 //
 func (rf *Raft) Start(command interface{}) (int, int, bool) {
 	/*
-	index := -1
-	term := -1
-	isLeader := true
+		index := -1
+		term := -1
+		isLeader := true
 
-	// Your code here (2B).
+		// Your code here (2B).
 
-	return index, term, isLeader
+		return index, term, isLeader
 
-	 */
+	*/
 	rf.mu.Lock()
 	defer rf.mu.Unlock()
 	if rf.state != Leader {
 		return -1, -1, false
 	}
 	entry := Entry{
-		Index : rf.getLastLogIndex() + 1,
-		Term : rf.currentTerm,
+		Index:   rf.getLastLogIndex() + 1,
+		Term:    rf.currentTerm,
 		Command: command,
 	}
-	rf.logs = append(rf.logs,entry)
+	rf.logs = append(rf.logs, entry)
 
 	//broadcast logs
 	rf.BroadcastHeartbeat(false)
@@ -230,13 +225,9 @@ func (rf *Raft) killed() bool {
 	return z == 1
 }
 
-
-
 func (rf *Raft) ChangeState(state NodeState) {
 	rf.state = state
 }
-
-
 
 //
 // the service or tester wants to create a Raft server. the ports
@@ -251,44 +242,41 @@ func (rf *Raft) ChangeState(state NodeState) {
 //
 func Make(peers []*labrpc.ClientEnd, me int,
 	persister *Persister, applyCh chan ApplyMsg) *Raft {
-		rf := &Raft{
-			peers:          peers,
-			persister:      persister,
-			me:             me,
-			dead:           0,
-			applyCh:        applyCh,
-			replicatorCond: make([]*sync.Cond, len(peers)),
-			state:          Follower,
-			currentTerm:    0,
-			votedFor:       -1,
-			logs:           make([]Entry, 1),
-			nextIndex:      make([]int, len(peers)),
-			matchIndex:     make([]int, len(peers)),
+	rf := &Raft{
+		peers:          peers,
+		persister:      persister,
+		me:             me,
+		dead:           0,
+		applyCh:        applyCh,
+		replicatorCond: make([]*sync.Cond, len(peers)),
+		state:          Follower,
+		currentTerm:    0,
+		votedFor:       -1,
+		logs:           make([]Entry, 1),
+		nextIndex:      make([]int, len(peers)),
+		matchIndex:     make([]int, len(peers)),
 
-			//heartbeatTimer: time.NewTimer(StableHeartbeatTimeout()),
-			//electionTimer:  time.NewTimer(RandomizedElectionTimeout()),
+		heartbeatTimer: time.NewTimer(StableHeartbeatTimeout()),
+		electionTimer:  time.NewTimer(RandomizedElectionTimeout()),
+	}
+	// initialize from state persisted before a crash
+	rf.readPersist(persister.ReadRaftState())
+	//when there have logs need to apply, signal it
+	rf.applyCond = sync.NewCond(&rf.mu)
+	lastLog := rf.getLastLog()
+	for i := 0; i < len(peers); i++ {
+		rf.matchIndex[i], rf.nextIndex[i] = 0, lastLog.Index+1
+		if i != rf.me {
+			rf.replicatorCond[i] = sync.NewCond(&sync.Mutex{})
+			// start replicator goroutine to replicate entries in batch
+			go rf.replicator(i)
 		}
-		// initialize from state persisted before a crash
-		rf.readPersist(persister.ReadRaftState())
-		//when there have logs need to apply, signal it
-		rf.applyCond = sync.NewCond(&rf.mu)
-		lastLog := rf.getLastLog()
-		for i := 0; i < len(peers); i++ {
-			rf.matchIndex[i], rf.nextIndex[i] = 0, lastLog.Index+1
-			if i != rf.me {
-				rf.replicatorCond[i] = sync.NewCond(&sync.Mutex{})
-				// start replicator goroutine to replicate entries in batch
-				go rf.replicator(i)
-			}
-		}
-		// start ticker goroutine to start elections
-		go rf.HeartbeatTicker()
-		go rf.electionTicker()
-		// start applier goroutine to push committed logs into applyCh exactly once(正好一次)
-		go rf.applier()
-	
-		return rf
+	}
+	// start ticker goroutine to start elections
+	//go rf.HeartbeatTicker()
+	go rf.Ticker()
+	// start applier goroutine to push committed logs into applyCh exactly once(正好一次)
+	go rf.applier()
+
+	return rf
 }
-
-
-

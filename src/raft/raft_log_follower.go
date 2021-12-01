@@ -15,8 +15,8 @@ func (rf *Raft) AppendEntries(request *AppendEntriesArgs, response *AppendEntrie
 
 
 	rf.ChangeState(Follower)
-	rf.refreshElectionTimeout()
-	//rf.electionTimer.Reset(RandomizedElectionTimeout())
+	//rf.refreshElectionTimeout()
+	rf.electionTimer.Reset(RandomizedElectionTimeout())
 
 	//check logs
 	//too old request
@@ -42,15 +42,7 @@ func (rf *Raft) AppendEntries(request *AppendEntriesArgs, response *AppendEntrie
 		return
 	}
 
-	//firstIndex := rf.getFirstLog().Index
-	//for index, entry := range request.Entries {
-	//	if entry.Index-firstIndex >= len(rf.logs) || rf.logs[entry.Index-firstIndex].Term != entry.Term {
-	//		rf.logs = append(rf.logs[:entry.Index-firstIndex], request.Entries[index:]...)
-	//		break
-	//	}
-	//}
 
-	//
 
 	firstIndex := rf.getFirstLog().Index
 	for index, entry := range request.Entries {
@@ -83,5 +75,4 @@ func (rf *Raft) advanceCommitIndexForFollower(leaderCommitIndex int) {
 		}
 		rf.commitIndex = newCommitIndex
 	}
-	return
 }

@@ -21,8 +21,8 @@ func (rf *Raft) RequestVote(request *RequestVoteArgs, response *RequestVoteReply
 	}
 
 	rf.votedFor = request.CandidateId
-	//rf.electionTimer.Reset(RandomizedElectionTimeout())
-	rf.refreshElectionTimeout()
+	rf.electionTimer.Reset(RandomizedElectionTimeout())
+	//rf.refreshElectionTimeout()
 	response.Term, response.VoteGranted = rf.currentTerm, true
 	return
 }

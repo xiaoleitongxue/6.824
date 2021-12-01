@@ -3,8 +3,7 @@ package raft
 func (rf *Raft) StartElection() {
 	args := rf.genRequestVoteRequest()
 	// use Closure
-	var grantedVotes int32
-	grantedVotes = 1
+	grantedVotes := 1
 	rf.votedFor = rf.me
 	rf.persist()
 	for peer := range rf.peers {
@@ -19,7 +18,7 @@ func (rf *Raft) StartElection() {
 				if rf.currentTerm == args.Term && rf.state == Candidate {
 					if reply.VoteGranted {
 						grantedVotes += 1
-						if grantedVotes >= rf.getMajority() {
+						if grantedVotes > len(rf.peers) /2 {
 							rf.ChangeState(Leader)
 							rf.BroadcastHeartbeat(true)
 						}

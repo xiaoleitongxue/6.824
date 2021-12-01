@@ -75,9 +75,6 @@ func (rf *Raft) genAppendEntriesRequest(index int) AppendEntriesArgs {
 
 func (rf *Raft) handleAppendEntriesResponse(peer int, request *AppendEntriesArgs, response *AppendEntriesReply) {
 
-	//if request.Term != rf.currentTerm{
-	//	return
-	//}
 
 	if response.Success == false {
 		if response.Term > rf.currentTerm {
@@ -107,8 +104,8 @@ func (rf *Raft) handleAppendEntriesResponse(peer int, request *AppendEntriesArgs
 	if oldCommitIndex >= newCommitIndex || rf.logs[newCommitIndex].Term != rf.currentTerm{
 		return
 	}
-	var count int32
-	count  = 1
+
+	count  := 1
 	for i := range rf.peers{
 		if i == rf.me{
 			continue
@@ -118,7 +115,7 @@ func (rf *Raft) handleAppendEntriesResponse(peer int, request *AppendEntriesArgs
 		}
 	}
 
-	if count >= rf.getMajority(){
+	if count > len(rf.peers)/2{
 		for i := oldCommitIndex + 1;i<=newCommitIndex;i++{
 			msg := ApplyMsg{
 				CommandValid: true,

@@ -1,25 +1,17 @@
 package raft
 
-import (
-	"time"
-)
-
 //import "time"
 
-func (rf *Raft) HeartbeatTicker() {
-	/*
+func (rf *Raft) Ticker() {
+
 	for rf.killed() == false {
 		select {
 		case <-rf.electionTimer.C:
 			rf.mu.Lock()
-			if rf.state == Leader{
-				rf.electionTimer.Reset(RandomizedElectionTimeout())
-			}else{
-				rf.ChangeState(Candidate)
-				rf.currentTerm += 1
-				rf.StartElection()
-				rf.electionTimer.Reset(RandomizedElectionTimeout())
-			}
+			rf.ChangeState(Candidate)
+			rf.currentTerm += 1
+			rf.StartElection()
+			rf.electionTimer.Reset(RandomizedElectionTimeout())
 			rf.mu.Unlock()
 		case <-rf.heartbeatTimer.C:
 			rf.mu.Lock()
@@ -31,20 +23,22 @@ func (rf *Raft) HeartbeatTicker() {
 		}
 	}
 
-	 */
-	for rf.killed() == false {
-		time.Sleep(StableHeartbeatTimeout())
-		rf.mu.Lock()
-		if rf.state == Leader {
-			rf.BroadcastHeartbeat(true)
-			rf.refreshElectionTimeout()
-			//rf.heartbeatTimer.Reset(StableHeartbeatTimeout())
+	/*
+		for rf.killed() == false {
+			time.Sleep(StableHeartbeatTimeout())
+			rf.mu.Lock()
+			if rf.state == Leader {
+				rf.BroadcastHeartbeat(true)
+				rf.refreshElectionTimeout()
+				//rf.heartbeatTimer.Reset(StableHeartbeatTimeout())
+			}
+			rf.mu.Unlock()
 		}
-		rf.mu.Unlock()
-	}
+	*/
 
 }
 
+/*
 func (rf *Raft) electionTicker(){
 	for rf.killed() == false {
 		rf.mu.Lock()
@@ -64,3 +58,4 @@ func (rf *Raft) electionTicker(){
 		rf.mu.Unlock()
 	}
 }
+*/
