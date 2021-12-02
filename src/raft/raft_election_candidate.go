@@ -1,7 +1,5 @@
 package raft
 
-import "fmt"
-
 func (rf *Raft) StartElection() {
 	args := rf.genRequestVoteRequest()
 	// use Closure
@@ -21,7 +19,7 @@ func (rf *Raft) StartElection() {
 						grantedVotes += 1
 						if grantedVotes > len(rf.peers) /2 {
 							rf.ChangeState(Leader)
-							fmt.Printf("now %v becomes to leader,its term is %v\n",rf.me,rf.currentTerm)
+							//fmt.Printf("now %v becomes to leader,its term is %v\n",rf.me,rf.currentTerm)
 							rf.BroadcastHeartbeat(true)
 						}
 					} else if reply.Term > rf.currentTerm {

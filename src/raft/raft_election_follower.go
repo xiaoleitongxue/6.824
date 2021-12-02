@@ -18,8 +18,12 @@ func (rf *Raft) RequestVote(request *RequestVoteArgs, response *RequestVoteReply
 		response.VoteGranted = false
 	}else if rf.votedFor == request.CandidateId || rf.votedFor == -1{
 		rf.votedFor = request.CandidateId
+		rf.currentTerm = request.Term
+		response.VoteGranted = true
+		rf.electionTimer.Reset(RandomizedElectionTimeout())
+	}else{
+		response.VoteGranted = false
 	}
-
-
+	response.Term = rf.currentTerm
 	return
 }

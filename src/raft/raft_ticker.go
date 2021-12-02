@@ -19,9 +19,9 @@ func (rf *Raft) Ticker() {
 			rf.mu.Lock()
 			if rf.state == Leader {
 				rf.BroadcastHeartbeat(true)
-				rf.heartbeatTimer.Reset(StableHeartbeatTimeout())
 			}
 			rf.mu.Unlock()
+			rf.heartbeatTimer.Reset(StableHeartbeatTimeout())
 		}
 	}
 
