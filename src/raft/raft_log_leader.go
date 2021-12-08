@@ -62,36 +62,34 @@ func (rf *Raft) replicateOneRound(peer int) {
 
 }
 
-func (rf *Raft) genAppendEntriesRequest(index int) AppendEntriesArgs {
+func (rf *Raft) genAppendEntriesRequest(prevLogIndex int) AppendEntriesArgs {
 	args := AppendEntriesArgs{
 		Term:         rf.currentTerm,
 		LeaderId:     rf.me,
-		PrevLogIndex: 0,
-		PrevLogTerm:  0,
+		PrevLogIndex: rf.getLog(prevLogIndex).Index,
+		PrevLogTerm:  rf.getLog(prevLogIndex).Term,
 		LeaderCommit: rf.commitIndex,
-		Entries:      rf.logs[index+1:],
+		Entries:      rf.logs[prevLogIndex+1:],
 	}
 	return args
 }
 
 func (rf *Raft) handleAppendEntriesResponse(peer int, request *AppendEntriesArgs, response *AppendEntriesReply) {
 
-
 	if response.Success == false {
 		if response.Term > rf.currentTerm {
 			rf.currentTerm = response.Term
 			rf.ChangeState(Follower)
-		} else if response.ConflictIndex > 0{
-			rf.nextIndex[peer] = response.ConflictIndex - 1
+		} else {
+			rf.nextIndex[peer] = rf.nextIndex[peer] - 1
 		}
 		return
 	}
 
-	//too old request
+	////too old request
 	//if request.PrevLogIndex + len(request.Entries) < rf.matchIndex[peer]{
 	//	return
 	//}
-
 
 	//if reply true, update matchIndex and nextIndex
 	rf.matchIndex[peer] = request.PrevLogIndex + len(request.Entries)
@@ -102,32 +100,30 @@ func (rf *Raft) handleAppendEntriesResponse(peer int, request *AppendEntriesArgs
 	oldCommitIndex := rf.commitIndex
 	newCommitIndex := rf.matchIndex[peer]
 
-	if oldCommitIndex >= newCommitIndex || rf.logs[newCommitIndex].Term != rf.currentTerm{
+	if oldCommitIndex >= newCommitIndex || rf.logs[newCommitIndex].Term != rf.currentTerm {
 		return
 	}
 	//new
-	count  := 1
-	for i := range rf.peers{
-		if i == rf.me{
+	count := 1
+	for i := range rf.peers {
+		if i == rf.me {
 			continue
 		}
-		if rf.matchIndex[peer] >= newCommitIndex{
-			count++
+		if rf.matchIndex[peer] >= newCommitIndex {
+			count+=1
 		}
 	}
 
-	if count > len(rf.peers)/2{
-		for i := oldCommitIndex + 1;i<=newCommitIndex;i++{
+	if count > len(rf.peers)/2 {
+		for i := oldCommitIndex + 1; i <= newCommitIndex; i++ {
 			msg := ApplyMsg{
 				CommandValid: true,
-				Command: rf.logs[i].Command,
+				Command:      rf.logs[i].Command,
 				CommandIndex: i,
 			}
 			rf.applyCh <- msg
 		}
 		rf.commitIndex = newCommitIndex
 	}
-
-
 
 }

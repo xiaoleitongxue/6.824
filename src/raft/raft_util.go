@@ -63,7 +63,9 @@ func (rf *Raft) getFirstLog() Entry{
 	return rf.logs[0]
 }
 
-
+func (rf *Raft) getLog(i int) Entry{
+	return rf.logs[i]
+}
 
 
 

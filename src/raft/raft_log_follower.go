@@ -26,52 +26,51 @@ func (rf *Raft) AppendEntries(request *AppendEntriesArgs, response *AppendEntrie
 
 	//2
 	if !rf.matchLog(request.PrevLogTerm, request.PrevLogIndex) {
-
-		lastIndex := rf.getLastLog().Index
-		//if you received a prc which prevLogIndex beyond end of your logs
-		if lastIndex < request.PrevLogIndex {
-			response.ConflictTerm, response.ConflictIndex = -1, lastIndex+1
-			response.Term, response.Success = rf.currentTerm, false
-		} else {
-			response.ConflictTerm, response.ConflictIndex = -1, request.PrevLogIndex
-			response.Term, response.Success = rf.currentTerm, false
-		}
+		//lastIndex := rf.getLastLog().Index
+		////if you received a prc which prevLogIndex beyond end of your logs
+		//if lastIndex < request.PrevLogIndex {
+		//	response.ConflictTerm, response.ConflictIndex = -1, lastIndex+1
+		//	response.Term, response.Success = rf.currentTerm, false
+		//} else {
+		//	response.ConflictTerm, response.ConflictIndex = -1, request.PrevLogIndex
+		//	response.Term, response.Success = rf.currentTerm, false
+		//}
+		response.Term = rf.currentTerm
+		response.Success = false
 		return
 	}
 
 
-	firstIndex := rf.getFirstLog().Index
-	for index, entry := range request.Entries {
-		if entry.Index-firstIndex >= len(rf.logs) || rf.logs[entry.Index-firstIndex].Term != entry.Term {
-			rf.logs = append(rf.logs[:entry.Index-firstIndex], request.Entries[index:]...)
-			break
-		}
-	}
-
-	////append entries
-	//if len(request.Entries) > 0 {
-	//	newLog := make([]Entry, 0)
-	//	for i := rf.logs[0].Index; i <= request.PrevLogIndex; i++ {
-	//		newLog = append(newLog, rf.logs[i])
-	//	}
-	//	newLog = append(newLog, request.Entries...)
-	//	if !rf.isLogUpToDate(newLog[len(newLog)-1].Term, newLog[len(newLog)-1].Index) {
-	//		rf.logs = newLog
+	//firstIndex := rf.getFirstLog().Index
+	//for index, entry := range request.Entries {
+	//	if entry.Index-firstIndex >= len(rf.logs) || rf.logs[entry.Index-firstIndex].Term != entry.Term {
+	//		rf.logs = append(rf.logs[:entry.Index-firstIndex], request.Entries[index:]...)
+	//		break
 	//	}
 	//}
 
+	//append entries
+	if len(request.Entries) > 0 {
+		newLog := make([]Entry, 0)
+		for i := rf.logs[0].Index; i <= request.PrevLogIndex; i++ {
+			newLog = append(newLog, rf.logs[i])
+		}
+		newLog = append(newLog, request.Entries...)
+		if !rf.isLogUpToDate(newLog[len(newLog)-1].Term, newLog[len(newLog)-1].Index) {
+			rf.logs = newLog
+		}
+	}
+
 	//update commitIndex
 	rf.advanceCommitIndexForFollower(request.LeaderCommit)
-	//fmt.Printf("%v is successfully append logs, and logs is %v. commitIndex is %v\n",rf.me,rf.logs,rf.commitIndex)
+
 	response.Term = rf.currentTerm
 	response.Success = true
 	return
-
 }
 
 func (rf *Raft) advanceCommitIndexForFollower(leaderCommitIndex int) {
 	oldCommitIndex := rf.commitIndex
-	//
 	newCommitIndex := min(leaderCommitIndex, rf.getLastLogIndex())
 
 	if oldCommitIndex < newCommitIndex {

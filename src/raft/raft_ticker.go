@@ -11,10 +11,10 @@ func (rf *Raft) Ticker() {
 			if rf.state != Leader{
 				rf.ChangeState(Candidate)
 				rf.currentTerm += 1
-				rf.electionTimer.Reset(RandomizedElectionTimeout())
 				rf.StartElection()
 			}
 			rf.mu.Unlock()
+			rf.electionTimer.Reset(RandomizedElectionTimeout())
 		case <-rf.heartbeatTimer.C:
 			rf.mu.Lock()
 			if rf.state == Leader {
