@@ -1,5 +1,7 @@
 package raft
 
+import "fmt"
+
 func (rf *Raft) BroadcastHeartbeat(isHeartBeat bool) {
 
 	for peer := range rf.peers {
@@ -86,10 +88,10 @@ func (rf *Raft) handleAppendEntriesResponse(peer int, request *AppendEntriesArgs
 		return
 	}
 
-	////too old request
-	//if request.PrevLogIndex + len(request.Entries) < rf.matchIndex[peer]{
-	//	return
-	//}
+	// too old request
+	if request.PrevLogIndex+len(request.Entries) < rf.matchIndex[peer] {
+		return
+	}
 
 	//if reply true, update matchIndex and nextIndex
 	rf.matchIndex[peer] = request.PrevLogIndex + len(request.Entries)
@@ -115,7 +117,8 @@ func (rf *Raft) handleAppendEntriesResponse(peer int, request *AppendEntriesArgs
 	}
 
 	if count > len(rf.peers)/2 {
-		for i := oldCommitIndex + 1; i <= newCommitIndex; i++ {
+		fmt.Printf("leader is %v and count is %v and peers is %v\n",rf.me,count,len(rf.peers))
+		for i := oldCommitIndex + 1; i <= newCommitIndex; i++{
 			msg := ApplyMsg{
 				CommandValid: true,
 				Command:      rf.logs[i].Command,

@@ -1,5 +1,7 @@
 package raft
 
+import "fmt"
+
 func (rf *Raft) AppendEntries(request *AppendEntriesArgs, response *AppendEntriesReply) {
 	rf.mu.Lock()
 	defer rf.mu.Unlock()
@@ -17,12 +19,12 @@ func (rf *Raft) AppendEntries(request *AppendEntriesArgs, response *AppendEntrie
 	//rf.refreshElectionTimeout()
 	rf.electionTimer.Reset(RandomizedElectionTimeout())
 
-	////check logs
-	////too old request
-	//if request.PrevLogIndex < rf.getFirstLog().Index{
-	//	response.Term, response.Success = 0, false
-	//	return
-	//}
+	if request.PrevLogIndex < rf.getFirstLog().Index {
+		response.Term, response.Success = 0, false
+		DPrintf("{Node %v} receives unexpected AppendEntriesRequest %v from {Node %v} because prevLogIndex %v < firstLogIndex %v", rf.me, request, request.LeaderId, request.PrevLogIndex, rf.getFirstLog().Index)
+		return
+	}
+
 
 	//2
 	if !rf.matchLog(request.PrevLogTerm, request.PrevLogIndex) {
@@ -63,7 +65,7 @@ func (rf *Raft) AppendEntries(request *AppendEntriesArgs, response *AppendEntrie
 
 	//update commitIndex
 	rf.advanceCommitIndexForFollower(request.LeaderCommit)
-
+	fmt.Printf("follower %v successful append logs from %v\n",rf.me,request.LeaderId)
 	response.Term = rf.currentTerm
 	response.Success = true
 	return
