@@ -2,7 +2,7 @@
 
 ### Lab1 : MapReduce 
 
-- [x] Passed All Test
+- [x] Passed
 
 ### Lab2
 
