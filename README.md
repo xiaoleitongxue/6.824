@@ -1,10 +1,15 @@
 # MIT-6.824-Spring-2021
 
-#### 当前进度
+### Lab1 : MapReduce 
 
-- [x] Lab1 : MapReduce 
+- [x] Passed All Test
 
-  已通过所有测试
-  
-  
+### Lab2
+
+- [x] Part 2A: Passed
+- [x] Part 2B: Passed
+
+
+
+
 

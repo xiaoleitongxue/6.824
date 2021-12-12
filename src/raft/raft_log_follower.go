@@ -1,7 +1,5 @@
 package raft
 
-import "fmt"
-
 func (rf *Raft) AppendEntries(request *AppendEntriesArgs, response *AppendEntriesReply) {
 	rf.mu.Lock()
 	defer rf.mu.Unlock()
@@ -64,8 +62,10 @@ func (rf *Raft) AppendEntries(request *AppendEntriesArgs, response *AppendEntrie
 	}
 
 	//update commitIndex
-	rf.advanceCommitIndexForFollower(request.LeaderCommit)
-	fmt.Printf("follower %v successful append logs from %v\n",rf.me,request.LeaderId)
+	//
+	if request.LeaderCommit > rf.commitIndex {
+		rf.advanceCommitIndexForFollower(request.LeaderCommit)
+	}
 	response.Term = rf.currentTerm
 	response.Success = true
 	return
@@ -74,7 +74,6 @@ func (rf *Raft) AppendEntries(request *AppendEntriesArgs, response *AppendEntrie
 func (rf *Raft) advanceCommitIndexForFollower(leaderCommitIndex int) {
 	oldCommitIndex := rf.commitIndex
 	newCommitIndex := min(leaderCommitIndex, rf.getLastLogIndex())
-
 	if oldCommitIndex < newCommitIndex {
 		for i := oldCommitIndex + 1; i <= newCommitIndex; i++ {
 			msg := ApplyMsg{

@@ -1,7 +1,5 @@
 package raft
 
-import "fmt"
-
 func (rf *Raft) BroadcastHeartbeat(isHeartBeat bool) {
 
 	for peer := range rf.peers {
@@ -10,7 +8,7 @@ func (rf *Raft) BroadcastHeartbeat(isHeartBeat bool) {
 		}
 		if isHeartBeat {
 			// need sending at once to maintain leadership
-			//fmt.Printf("%v is leader, it begins to send logs, leader's commitIndx is %v\n",rf.me,rf.commitIndex)
+
 			go rf.replicateOneRound(peer)
 		} else {
 			// just signal replicator goroutine to send entries in batch
@@ -54,12 +52,11 @@ func (rf *Raft) replicateOneRound(peer int) {
 	prevLogIndex := rf.nextIndex[peer] - 1
 	// just entries can catch up
 	request := rf.genAppendEntriesRequest(prevLogIndex)
+
 	rf.mu.RUnlock()
 	response := new(AppendEntriesReply)
 	if rf.sendAppendEntries(peer, &request, response) {
-		rf.mu.Lock()
 		rf.handleAppendEntriesResponse(peer, &request, response)
-		rf.mu.Unlock()
 	}
 
 }
@@ -77,13 +74,16 @@ func (rf *Raft) genAppendEntriesRequest(prevLogIndex int) AppendEntriesArgs {
 }
 
 func (rf *Raft) handleAppendEntriesResponse(peer int, request *AppendEntriesArgs, response *AppendEntriesReply) {
-
+	rf.mu.Lock()
+	defer rf.mu.Unlock()
 	if response.Success == false {
 		if response.Term > rf.currentTerm {
 			rf.currentTerm = response.Term
 			rf.ChangeState(Follower)
-		} else {
-			rf.nextIndex[peer] = rf.nextIndex[peer] - 1
+		} else{
+			if request.PrevLogIndex - 1 > 0{
+				rf.nextIndex[peer] = request.PrevLogIndex - 1
+			}
 		}
 		return
 	}
@@ -101,6 +101,9 @@ func (rf *Raft) handleAppendEntriesResponse(peer int, request *AppendEntriesArgs
 	//update its commitIndex
 	oldCommitIndex := rf.commitIndex
 	newCommitIndex := rf.matchIndex[peer]
+	if oldCommitIndex > newCommitIndex{
+		return
+	}
 
 	if oldCommitIndex >= newCommitIndex || rf.logs[newCommitIndex].Term != rf.currentTerm {
 		return
@@ -111,13 +114,11 @@ func (rf *Raft) handleAppendEntriesResponse(peer int, request *AppendEntriesArgs
 		if i == rf.me {
 			continue
 		}
-		if rf.matchIndex[peer] >= newCommitIndex {
+		if rf.matchIndex[i] >= newCommitIndex {
 			count+=1
 		}
 	}
-
-	if count > len(rf.peers)/2 {
-		fmt.Printf("leader is %v and count is %v and peers is %v\n",rf.me,count,len(rf.peers))
+	if count > (len(rf.peers)/2){
 		for i := oldCommitIndex + 1; i <= newCommitIndex; i++{
 			msg := ApplyMsg{
 				CommandValid: true,
@@ -128,5 +129,4 @@ func (rf *Raft) handleAppendEntriesResponse(peer int, request *AppendEntriesArgs
 		}
 		rf.commitIndex = newCommitIndex
 	}
-
 }

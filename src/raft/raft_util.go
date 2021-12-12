@@ -39,11 +39,10 @@ func max(a int, b int) int {
 }
 
 func min(a int, b int) int {
-	if a > b{
-		return b
-	}else {
+	if a < b{
 		return a
 	}
+	return b
 }
 
 func (rf *Raft) getLastLogIndex() int {
